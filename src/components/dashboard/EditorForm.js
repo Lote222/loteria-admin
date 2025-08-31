@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button"; // Usamos el componente Button
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +16,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// --- DICCIONARIO DE TRADUCCIONES ---
+const labelTranslations = {
+  address: "Dirección",
+  phone_contact: "Teléfono de Contacto",
+  email_contact: "Email de Contacto",
+  whatsapp_number: "Número de WhatsApp",
+  form_recipient_email: "Email para Recibir Formularios",
+  // Puedes añadir más traducciones aquí en el futuro
+};
+// ------------------------------------
 
 export default function EditorForm({ configurations }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,23 +40,20 @@ export default function EditorForm({ configurations }) {
   const {
     register,
     handleSubmit,
-    formState: { isSubmitting, isDirty }, // 👈 Obtenemos 'isDirty'
+    formState: { isSubmitting, isDirty },
   } = useForm({ defaultValues });
 
   const supabase = createClient();
 
-  // 1. Al enviar, solo abrimos el modal
   const handleConfirm = (data) => {
     setFormData(data);
     setIsModalOpen(true);
   };
 
-  // 2. La lógica de guardado real se ejecuta al confirmar en el modal
   const handleSaveChanges = async () => {
     if (!formData) return;
 
     const promise = new Promise(async (resolve, reject) => {
-      // (La lógica de guardado es la misma que antes)
       try {
         const updatePromises = Object.entries(formData).map(([key, value]) =>
           supabase
@@ -79,7 +87,8 @@ export default function EditorForm({ configurations }) {
               htmlFor={config.key}
               className="block text-sm font-medium text-gray-700 capitalize"
             >
-              {config.key.replace(/_/g, " ")}
+              {/* Usamos el diccionario para traducir. Si no hay traducción, mostramos la llave original. */}
+              {labelTranslations[config.key] || config.key.replace(/_/g, " ")}
             </label>
             <input
               id={config.key}
@@ -91,26 +100,28 @@ export default function EditorForm({ configurations }) {
         <div>
           <Button
             type="submit"
-            disabled={!isDirty || isSubmitting} // 👈 El botón se desactiva si no hay cambios
-            className="w-full bg-sky-800 hover:bg-green-800"
+            disabled={!isDirty || isSubmitting}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             {isSubmitting ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </div>
       </form>
 
-      {/* Modal de Confirmación */}
       <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Estás a punto de guardar los nuevos cambios.
+              Estás a punto de guardar los nuevos cambios. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className={" hover:bg-red-800 hover:text-white"}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSaveChanges} className={"bg-sky-800 hover:bg-green-800"}>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleSaveChanges}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
               Confirmar y Guardar
             </AlertDialogAction>
           </AlertDialogFooter>
