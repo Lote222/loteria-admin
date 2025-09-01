@@ -1,11 +1,11 @@
 // src/app/dashboard/layout.js
-import { createClient } from '@/lib/supabase/server';
-import LogoutButton from '@/components/ui/LogoutButton';
-import SiteLink from '@/components/dashboard/SiteLink'; // 👈 1. Importamos el nuevo componente
+import { createClient } from "@/lib/supabase/server";
+import LogoutButton from "@/components/ui/LogoutButton";
+import SiteLink from "@/components/dashboard/SiteLink"; // 👈 1. Importamos el nuevo componente
 
 export default async function DashboardLayout({ children }) {
   const supabase = createClient();
-  const { data: websites } = await supabase.from('websites').select('*');
+  const { data: websites } = await supabase.from("websites").select("*");
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -26,9 +26,7 @@ export default async function DashboardLayout({ children }) {
       </aside>
 
       {/* Área de Contenido Principal */}
-      <main className="flex-1 p-10 overflow-y-auto">
-        {children}
-      </main>
+      <main className="flex-1 p-10 overflow-y-auto">{children}</main>
     </div>
   );
 }
