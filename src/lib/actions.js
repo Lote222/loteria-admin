@@ -84,3 +84,66 @@ export async function deleteSorteo(sorteo_id) {
   revalidatePath("/dashboard/sorteos/la-balota");
   return { success: true };
 }
+
+// --- ACCIONES PARA PREMIOS ---
+
+const premioSchema = z.object({
+  orden: z.coerce.number().int().positive("El orden debe ser un número positivo"),
+  titulo_acierto: z.string().min(3, "El título es requerido"),
+  descripcion_premio: z.string().min(3, "La descripción es requerida"),
+});
+
+export async function addPremio(website_id, formData) {
+  const rawData = Object.fromEntries(formData);
+  const validatedFields = premioSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.from("premios").insert([
+    { website_id, ...validatedFields.data },
+  ]);
+
+  if (error) {
+    return { errors: { _general: ["Error al guardar el premio."] } };
+  }
+
+  revalidatePath("/dashboard/premios/la-balota");
+  return { success: true };
+}
+
+export async function updatePremio(premio_id, formData) {
+    const rawData = Object.fromEntries(formData);
+    const validatedFields = premioSchema.safeParse(rawData);
+
+    if (!validatedFields.success) {
+        return { errors: validatedFields.error.flatten().fieldErrors };
+    }
+    
+    const supabase = createClient();
+    const { error } = await supabase
+        .from("premios")
+        .update(validatedFields.data)
+        .eq("id", premio_id);
+
+    if (error) {
+        return { errors: { _general: ["Error al actualizar el premio."] } };
+    }
+
+    revalidatePath("/dashboard/premios/la-balota");
+    return { success: true };
+}
+
+export async function deletePremio(premio_id) {
+    const supabase = createClient();
+    const { error } = await supabase.from("premios").delete().eq("id", premio_id);
+
+    if (error) {
+        return { error: "Hubo un error al eliminar el premio." };
+    }
+
+    revalidatePath("/dashboard/premios/la-balota");
+    return { success: true };
+}
