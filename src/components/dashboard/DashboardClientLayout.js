@@ -2,13 +2,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import SiteLink from "@/components/dashboard/SiteLink";
 import LogoutButton from "@/components/ui/LogoutButton";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Users } from "lucide-react";
 
-export default function DashboardClientLayout({ websites, children }) {
+export default function DashboardClientLayout({ websites, children, userProfile }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Filtra los sitios web a los que el usuario tiene acceso
+  const accessibleWebsites = userProfile?.role === 'admin' 
+    ? websites // El admin ve todo
+    : websites.filter(site => userProfile?.permissions?.can_view?.includes(site.slug));
+
+  const isAdmin = userProfile?.role === 'admin';
+  const isUsersPageActive = pathname === '/dashboard/admin/users';
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -40,10 +51,34 @@ export default function DashboardClientLayout({ websites, children }) {
         </div>
         <nav className="flex-grow">
           <ul>
-            {websites?.map((site) => (
+            {accessibleWebsites?.map((site) => (
               <SiteLink key={site.id} site={site} />
             ))}
           </ul>
+          
+          {/* Sección de Administración visible solo para admins */}
+          {isAdmin && (
+            <div className="mt-6 pt-4 border-t">
+              <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Administración
+              </h3>
+              <ul className="mt-2">
+                <li>
+                  <Link
+                    href="/dashboard/admin/users"
+                    className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
+                      isUsersPageActive
+                        ? "bg-sky-700 text-white"
+                        : "text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Gestionar Usuarios
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
         </nav>
         <div className="mt-auto">
           <LogoutButton />

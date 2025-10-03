@@ -6,11 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-
-// La importación ahora apunta correctamente a la carpeta src gracias al alias '@'
 import { createClient } from '@/lib/supabase/client';
+import ForgotPasswordDialog from '@/components/auth/ForgotPasswordDialog'; // 👈 1. Importar el nuevo componente
 
-// El esquema de Zod funciona igual en JavaScript y nos da validación en runtime
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
@@ -63,12 +61,16 @@ export default function LoginPage() {
             {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Contraseña
-            </label>
+            <div className="flex justify-between items-center">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Contraseña
+              </label>
+              {/* 👇 2. Añadir el componente aquí */}
+              <ForgotPasswordDialog />
+            </div>
             <input
               id="password"
               type="password"
