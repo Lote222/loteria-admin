@@ -1,9 +1,8 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-// src/components/dashboard/SiteLink.js
 "use client";
 
 import Link from 'next/link';
-import { ExternalLink, Pencil, Ticket, Trophy } from 'lucide-react'; // 1. Importar icono Trophy
+import { ExternalLink, Pencil, Ticket, Trophy, Star } from 'lucide-react'; // 1. Importar icono 'Star'
 import { usePathname } from 'next/navigation';
 
 export default function SiteLink({ site }) {
@@ -13,12 +12,18 @@ export default function SiteLink({ site }) {
 
   const pathname = usePathname();
   const isEditingInfo = pathname === `/dashboard/edit/${site.slug}`;
-  const isEditingSorteos = pathname === `/dashboard/sorteos/${site.slug}`;
-  const isEditingPremios = pathname === `/dashboard/premios/${site.slug}`; // 2. Lógica para enlace activo
+  
+  // Lógica para enlaces de "La Balota"
+  const isEditingSorteosBalota = pathname === `/dashboard/sorteos/${site.slug}`;
+  const isEditingPremiosBalota = pathname === `/dashboard/premios/${site.slug}`;
 
-  // Reglas de negocio
-  const hasSorteosFeature = site.slug === 'la-balota';
-  const hasPremiosFeature = site.slug === 'la-balota';
+  // 2. Lógica para el nuevo enlace de "Herbolaria"
+  const isEditingSorteoHerbolaria = pathname === `/dashboard/sorteo-herbolaria/${site.slug}`;
+
+  // Reglas de negocio para mostrar los botones
+  const hasSorteosBalotaFeature = site.slug === 'la-balota';
+  const hasPremiosBalotaFeature = site.slug === 'la-balota';
+ const hasHerbolariaSorteoFeature = site.slug === 'herbolaria';
 
   return (
     <li className="mb-3 p-2 rounded-md group bg-gray-50 border">
@@ -39,25 +44,38 @@ export default function SiteLink({ site }) {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar Información
             </Link>
-            {hasSorteosFeature && (
+            
+            {/* Funcionalidades existentes de La Balota */}
+            {hasSorteosBalotaFeature && (
               <Link 
                 href={`/dashboard/sorteos/${site.slug}`} 
                 className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingSorteos ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
+                  isEditingSorteosBalota ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
                 }`}>
                   <Ticket className="mr-2 h-4 w-4" />
                   Gestionar Sorteos
               </Link>
             )}
-            {/* 3. Botón condicional para Premios */}
-            {hasPremiosFeature && (
+            {hasPremiosBalotaFeature && (
               <Link 
                 href={`/dashboard/premios/${site.slug}`} 
                 className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingPremios ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
+                  isEditingPremiosBalota ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
                 }`}>
                   <Trophy className="mr-2 h-4 w-4" />
                   Gestionar Premios
+              </Link>
+            )}
+
+            {/* 4. Botón condicional para el Sorteo de Herbolaria */}
+            {hasHerbolariaSorteoFeature && (
+              <Link 
+                href={`/dashboard/sorteo-herbolaria/${site.slug}`} 
+                className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
+                  isEditingSorteoHerbolaria ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
+                }`}>
+                  <Star className="mr-2 h-4 w-4" />
+                  Gestionar Sorteo
               </Link>
             )}
         </div>

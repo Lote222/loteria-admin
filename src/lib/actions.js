@@ -252,3 +252,185 @@ export async function sendPasswordResetEmail(formData) {
   }
   return { success: true };
 }
+
+// ... (resto de las actions) ...
+
+// --- ACCIONES PARA SORTEO HERBOLARIA (VERSIÓN CORREGIDA) ---
+
+const sorteoConfigSchema = z.object({
+  website_id: z.string().uuid(),
+  sorteo_modo: z.enum(['semanal', 'mensual', 'especifico']),
+  sorteo_fecha_especifica: z.string().nullable().optional(),
+});
+
+export async function updateHerbolariaSorteoConfig(formData) {
+  const rawData = {
+    website_id: formData.get('website_id'),
+    sorteo_modo: formData.get('sorteo_modo'),
+    sorteo_fecha_especifica: formData.get('sorteo_fecha_especifica'),
+  };
+
+  const validatedFields = sorteoConfigSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return { error: "Datos inválidos." };
+  }
+
+  const { website_id, sorteo_modo, sorteo_fecha_especifica } = validatedFields.data;
+
+  if (sorteo_modo === 'especifico' && !sorteo_fecha_especifica) {
+    return { error: "Debe seleccionar una fecha para el modo específico." };
+  }
+
+  const supabase = createClient();
+
+  // --- LÓGICA CORREGIDA CON UPSERT ---
+  const { error } = await supabase
+    .from('site_configurations')
+    .upsert([
+      { 
+        website_id: website_id, 
+        key: 'sorteo_modo', 
+        value: sorteo_modo 
+      },
+      { 
+        website_id: website_id, 
+        key: 'sorteo_fecha_especifica', 
+        value: sorteo_modo === 'especifico' ? sorteo_fecha_especifica : null 
+      }
+    ], {
+      // Le decimos a Supabase que identifique las filas por la combinación de website_id y key
+      onConflict: 'website_id, key' 
+    });
+  // --- FIN DE LA LÓGICA CORREGIDA ---
+
+  if (error) {
+    console.error("Error al hacer upsert en la configuración del sorteo:", error);
+    return { error: "Hubo un error al guardar la configuración." };
+  }
+  
+  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+  return { success: true };
+}
+
+// ... (resto de las actions de clientes) ...
+
+// --- ACCIONES PARA CLIENTES DEL SORTEO DE HERBOLARIA ---
+
+const clienteSorteoSchema = z.object({
+  nombre_cliente: z.string().min(3, "El nombre es requerido."),
+  numero_factura: z.string().min(1, "El número de factura es requerido."),
+  fecha_compra: z.string().min(1, "La fecha de compra es requerida."), // <-- CAMPO AÑADIDO
+});
+
+// CREATE
+export async function addHerbolariaClient(website_id, sorteo_id, formData) {
+  const rawData = Object.fromEntries(formData);
+  const validatedFields = clienteSorteoSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.from("sorteo_clientes").insert([
+    { 
+      website_id, 
+      sorteo_id, // Vinculamos al sorteo actual
+      ...validatedFields.data 
+    },
+  ]);
+
+  if (error) {
+    console.error("Error al añadir cliente:", error);
+    return { error: "Hubo un error al guardar el cliente." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+  return { success: true };
+}
+
+// UPDATE
+export async function updateHerbolariaClient(clientId, formData) {
+  const rawData = Object.fromEntries(formData);
+  const validatedFields = clienteSorteoSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+    
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("sorteo_clientes")
+    .update(validatedFields.data)
+    .eq("id", clientId);
+
+  if (error) {
+    console.error("Error al actualizar cliente:", error);
+    return { error: "Hubo un error al actualizar el cliente." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+  return { success: true };
+}
+
+// DELETE
+export async function deleteHerbolariaClient(clientId) {
+    const supabase = createClient();
+    const { error } = await supabase.from("sorteo_clientes").delete().eq("id", clientId);
+
+    if (error) {
+        console.error("Error al eliminar cliente:", error);
+        return { error: "Hubo un error al eliminar el cliente." };
+    }
+
+    revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+    return { success: true };
+}
+
+// ... (código existente de actions.js) ...
+
+// --- ACCIONES PARA GESTIONAR EL GANADOR DEL SORTEO DE HERBOLARIA ---
+
+// Acción para designar un ganador manualmente
+export async function setHerbolariaManualWinner(sorteo_id, cliente_id) {
+  if (!sorteo_id || !cliente_id) {
+    return { error: "Faltan datos para asignar el ganador." };
+  }
+  
+  const supabase = createClient();
+  // Actualizamos la fila del sorteo para establecer el ID del ganador
+  const { error } = await supabase
+    .from('sorteo_resultados')
+    .update({ cliente_ganador_id: cliente_id })
+    .eq('id', sorteo_id);
+
+  if (error) {
+    console.error("Error al asignar ganador manual:", error);
+    return { error: "No se pudo asignar el ganador." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+  return { success: true };
+}
+
+// Acción para ejecutar el sorteo automático
+export async function runHerbolariaAutomaticSorteo(sorteo_id) {
+  if (!sorteo_id) {
+    return { error: "No se encontró un sorteo programado para ejecutar." };
+  }
+
+  const supabase = createClient();
+  // Llamamos a la función de PostgreSQL 'realizar_sorteo_automatico'
+  const { error } = await supabase.rpc('realizar_sorteo_automatico', {
+    sorteo_id_param: sorteo_id
+  });
+
+  if (error) {
+    console.error("Error al ejecutar el sorteo automático:", error);
+    return { error: "La función del sorteo automático falló." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+  return { success: true, message: "¡Sorteo realizado con éxito!" };
+}
