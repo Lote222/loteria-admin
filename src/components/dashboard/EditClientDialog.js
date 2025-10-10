@@ -12,6 +12,16 @@ export function EditClientDialog({ cliente, open, onOpenChange }) {
   const [errors, setErrors] = useState({});
   const [isPending, startTransition] = useTransition();
 
+  // Helper para formatear la fecha para el input
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toISOString().split('T')[0];
+    } catch (e) {
+      return '';
+    }
+  };
+
   const handleSubmit = (formData) => {
     setErrors({});
     startTransition(async () => {
@@ -38,9 +48,14 @@ export function EditClientDialog({ cliente, open, onOpenChange }) {
         <form action={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div>
-              <Label htmlFor="nombre_cliente">Nombre del Cliente</Label>
-              <Input id="nombre_cliente" name="nombre_cliente" defaultValue={cliente.nombre_cliente} className="mt-1" />
-              {errors.nombre_cliente && <p className="text-red-500 text-sm mt-1">{errors.nombre_cliente[0]}</p>}
+              <Label htmlFor="nombre">Nombre del Cliente</Label>
+              <Input id="nombre" name="nombre" defaultValue={cliente.nombre} className="mt-1" />
+              {errors.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre[0]}</p>}
+            </div>
+            <div>
+              <Label htmlFor="telefono">Teléfono (Opcional)</Label>
+              <Input id="telefono" name="telefono" defaultValue={cliente.telefono || ''} className="mt-1" />
+              {errors.telefono && <p className="text-red-500 text-sm mt-1">{errors.telefono[0]}</p>}
             </div>
             <div>
               <Label htmlFor="numero_factura">Número de Factura</Label>
@@ -49,7 +64,7 @@ export function EditClientDialog({ cliente, open, onOpenChange }) {
             </div>
             <div>
               <Label htmlFor="fecha_compra">Fecha de Compra</Label>
-              <Input id="fecha_compra" name="fecha_compra" type="date" defaultValue={cliente.fecha_compra} className="mt-1" />
+              <Input id="fecha_compra" name="fecha_compra" type="date" defaultValue={formatDateForInput(cliente.fecha_compra)} className="mt-1" />
               {errors.fecha_compra && <p className="text-red-500 text-sm mt-1">{errors.fecha_compra[0]}</p>}
             </div>
           </div>

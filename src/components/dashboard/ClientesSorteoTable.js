@@ -1,4 +1,3 @@
-// src/components/dashboard/ClientesSorteoTable.js
 "use client";
 
 import { useState, useTransition } from "react";
@@ -27,7 +26,7 @@ import { deleteHerbolariaClient } from "@/lib/actions";
 import { AddClientDialog } from "@/components/dashboard/AddClientDialog";
 import { EditClientDialog } from "@/components/dashboard/EditClientDialog";
 
-export default function ClientesSorteoTable({ clientes, website_id, sorteo_id }) {
+export default function ClientesSorteoTable({ clientes, website_id }) {
   const [isPending, startTransition] = useTransition();
   const [clienteToDelete, setClienteToDelete] = useState(null);
   const [clienteToEdit, setClienteToEdit] = useState(null);
@@ -45,23 +44,18 @@ export default function ClientesSorteoTable({ clientes, website_id, sorteo_id })
     });
   };
 
-  const hasActiveSorteo = !!sorteo_id;
-
   return (
     <>
       <div className="flex justify-end mb-4">
-        {hasActiveSorteo ? (
-          <AddClientDialog website_id={website_id} sorteo_id={sorteo_id} />
-        ) : (
-          <Button disabled>No hay sorteo programado</Button>
-        )}
+        {/* El botón para añadir participantes ahora está siempre visible */}
+        <AddClientDialog website_id={website_id} />
       </div>
 
       {clientes.length === 0 ? (
         <div className="p-8 text-center border-2 border-dashed rounded-lg">
           <h3 className="text-lg font-medium text-gray-600">No hay participantes</h3>
           <p className="text-sm text-gray-500 mt-2">
-            Aún no se han añadido clientes para el sorteo actual.
+            Añade clientes a la lista general de participantes del sorteo.
           </p>
         </div>
       ) : (
@@ -70,15 +64,19 @@ export default function ClientesSorteoTable({ clientes, website_id, sorteo_id })
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre del Cliente</TableHead>
+                <TableHead>Teléfono</TableHead>
                 <TableHead>Número de Factura</TableHead>
+                <TableHead>Fecha Compra</TableHead>
                 <TableHead className="text-right w-[120px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientes.map((cliente) => (
                 <TableRow key={cliente.id}>
-                  <TableCell data-label="Nombre" className="font-medium">{cliente.nombre_cliente}</TableCell>
+                  <TableCell data-label="Nombre" className="font-medium">{cliente.nombre}</TableCell>
+                  <TableCell data-label="Teléfono">{cliente.telefono}</TableCell>
                   <TableCell data-label="Factura">{cliente.numero_factura}</TableCell>
+                  <TableCell data-label="Fecha Compra">{cliente.fecha_compra}</TableCell>
                   <TableCell data-label="Acciones" className="text-right">
                     <div className="flex gap-2 justify-end">
                       <Button variant="outline" size="icon" onClick={() => setClienteToEdit(cliente)}>
@@ -102,7 +100,7 @@ export default function ClientesSorteoTable({ clientes, website_id, sorteo_id })
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará permanentemente al participante del sorteo.
+              Esta acción eliminará permanentemente al participante de la lista.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

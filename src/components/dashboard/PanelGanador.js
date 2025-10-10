@@ -8,19 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { setHerbolariaManualWinner, runHerbolariaAutomaticSorteo } from "@/lib/actions";
 
-export default function PanelGanador({ sorteo, clientes }) {
+export default function PanelGanador({ sorteo, clientes, website_id }) {
   const [isPending, startTransition] = useTransition();
   const [selectedClientId, setSelectedClientId] = useState(sorteo?.cliente_ganador_id || "");
   const [isAlertOpen, setIsAlertOpen] = useState(false);
 
-  // El ganador actual puede venir pre-cargado
   const ganadorActual = sorteo?.cliente_ganador_id 
     ? clientes.find(c => c.id === sorteo.cliente_ganador_id)
     : null;
 
   const handleManualWinner = () => {
     if (!selectedClientId) {
-      toast.error("Selecciona un ganador", { description: "Debes elegir un participante de la lista." });
+      toast.error("Selecciona un ganador de la lista.");
       return;
     }
     startTransition(async () => {
@@ -39,9 +38,9 @@ export default function PanelGanador({ sorteo, clientes }) {
       if (result?.error) {
         toast.error("Error", { description: result.error });
       } else {
-        toast.success("¡Sorteo Realizado!", { description: "Se ha seleccionado un ganador de forma aleatoria." });
+        toast.success("¡Sorteo Realizado!", { description: "Se ha seleccionado un ganador." });
       }
-      setIsAlertOpen(false); // Cierra el diálogo de confirmación
+      setIsAlertOpen(false);
     });
   };
 
@@ -49,37 +48,30 @@ export default function PanelGanador({ sorteo, clientes }) {
     return <p className="text-sm text-muted-foreground">No hay un sorteo programado activo.</p>;
   }
   
-  if (sorteo.estado === 'realizado') {
-    return (
-      <div>
-        <Label className="text-base font-semibold">Sorteo Finalizado</Label>
-        <p className="text-sm text-muted-foreground mt-2">
-          El ganador de este sorteo fue: <span className="font-bold text-primary">{ganadorActual?.nombre_cliente || 'No definido'}</span>.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="space-y-4">
         <div>
           <Label>Ganador Pre-seleccionado</Label>
           <p className="text-sm font-bold text-indigo-600 mt-1">
-            {ganadorActual ? ganadorActual.nombre_cliente : "Aún no hay un ganador asignado"}
+            {ganadorActual ? ganadorActual.nombre : "Aún no hay un ganador asignado"}
           </p>
         </div>
         
         <div className="space-y-2">
           <Label htmlFor="winner-select">Designar Ganador Manualmente</Label>
-          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+          <Select 
+            value={selectedClientId} 
+            onValueChange={setSelectedClientId}
+            disabled={clientes.length === 0} 
+          >
             <SelectTrigger id="winner-select">
-              <SelectValue placeholder="Selecciona un participante..." />
+              <SelectValue placeholder={clientes.length === 0 ? "No hay participantes" : "Selecciona un participante..."} />
             </SelectTrigger>
             <SelectContent>
               {clientes.map(cliente => (
                 <SelectItem key={cliente.id} value={cliente.id}>
-                  {cliente.nombre_cliente}
+                  {cliente.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -92,12 +84,12 @@ export default function PanelGanador({ sorteo, clientes }) {
         <div className="border-t pt-4 space-y-2">
           <Label>Ejecutar Sorteo Automático</Label>
           <p className="text-xs text-muted-foreground">
-            Esto seleccionará un ganador al azar entre todos los participantes y finalizará el sorteo. Esta acción es irreversible.
+            Esta acción seleccionará un ganador al azar y finalizará el sorteo.
           </p>
           <Button 
             variant="destructive" 
             onClick={() => setIsAlertOpen(true)} 
-            disabled={isPending || clientes.length === 0} // Deshabilitado si no hay clientes
+            disabled={isPending || clientes.length === 0}
             className="w-full"
           >
             Realizar Sorteo Automático
@@ -110,7 +102,7 @@ export default function PanelGanador({ sorteo, clientes }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar Sorteo Automático?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción seleccionará un ganador al azar y marcará el sorteo como &quot;realizado&quot;. No podrás deshacer esta acción. ¿Estás seguro?
+              Esta acción es irreversible y marcará el sorteo como &quot;realizado&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

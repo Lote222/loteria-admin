@@ -1,11 +1,23 @@
-// src/lib/actions.js
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-// Importamos la librería base de Supabase para el cliente de admin
 import { createClient as createAdminSupabaseClient } from '@supabase/supabase-js';
+
+// --- Helper para crear un cliente de Supabase con rol de administrador (service_role) ---
+const createAdminClient = () => {
+  return createAdminSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
 
 
 // --- ESQUEMAS DE VALIDACIÓN ---
@@ -24,8 +36,7 @@ const premioSchema = z.object({
   descripcion_premio: z.string().min(3, "La descripción es requerida"),
 });
 
-
-// --- ACCIONES PARA SORTEOS ---
+// --- ACCIONES PARA SORTEOS (LA BALOTA) ---
 
 export async function addSorteo(website_id, formData) {
   const rawData = Object.fromEntries(formData);
@@ -95,7 +106,7 @@ export async function deleteSorteo(sorteo_id) {
 }
 
 
-// --- ACCIONES PARA PREMIOS ---
+// --- ACCIONES PARA PREMIOS (LA BALOTA) ---
 
 export async function addPremio(website_id, formData) {
   const rawData = Object.fromEntries(formData);
@@ -152,24 +163,8 @@ export async function deletePremio(premio_id) {
     return { success: true };
 }
 
-
 // --- ACCIONES PARA GESTIÓN DE USUARIOS ---
 
-// Helper para crear un cliente de Supabase con rol de administrador (service_role)
-const createAdminClient = () => {
-  return createAdminSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-};
-
-// Acción para invitar a un nuevo usuario por email
 export async function inviteUserByEmail(formData) {
   const email = formData.get("email");
   const emailSchema = z.string().email("El email proporcionado no es válido.");
@@ -191,7 +186,6 @@ export async function inviteUserByEmail(formData) {
   return { success: true };
 }
 
-// Acción para actualizar los permisos de un usuario
 export async function updateUserPermissions(userId, permissions) {
   const supabase = createClient();
   
@@ -210,7 +204,6 @@ export async function updateUserPermissions(userId, permissions) {
 }
 
 const passwordSchema = z.string().min(8, "La contraseña debe tener al menos 8 caracteres.");
-
 export async function createUserWithPassword(formData) {
   const email = formData.get("email");
   const password = formData.get("password");
@@ -226,7 +219,7 @@ export async function createUserWithPassword(formData) {
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email: emailValidation.data,
     password: passwordValidation.data,
-    email_confirm: true, // Marcamos el email como confirmado automáticamente
+    email_confirm: true,
   });
 
   if (error) {
@@ -238,7 +231,6 @@ export async function createUserWithPassword(formData) {
   return { success: true, user: data.user };
 }
 
-// Añadir a src/lib/actions.js
 export async function sendPasswordResetEmail(formData) {
   const email = formData.get("email");
   const supabase = createClient();
@@ -253,9 +245,7 @@ export async function sendPasswordResetEmail(formData) {
   return { success: true };
 }
 
-// ... (resto de las actions) ...
-
-// --- ACCIONES PARA SORTEO HERBOLARIA (VERSIÓN CORREGIDA) ---
+// --- ACCIONES PARA SORTEO HERBOLARIA ---
 
 const sorteoConfigSchema = z.object({
   website_id: z.string().uuid(),
@@ -269,62 +259,39 @@ export async function updateHerbolariaSorteoConfig(formData) {
     sorteo_modo: formData.get('sorteo_modo'),
     sorteo_fecha_especifica: formData.get('sorteo_fecha_especifica'),
   };
-
   const validatedFields = sorteoConfigSchema.safeParse(rawData);
-
   if (!validatedFields.success) {
     return { error: "Datos inválidos." };
   }
-
   const { website_id, sorteo_modo, sorteo_fecha_especifica } = validatedFields.data;
-
   if (sorteo_modo === 'especifico' && !sorteo_fecha_especifica) {
     return { error: "Debe seleccionar una fecha para el modo específico." };
   }
-
   const supabase = createClient();
-
-  // --- LÓGICA CORREGIDA CON UPSERT ---
   const { error } = await supabase
     .from('site_configurations')
     .upsert([
-      { 
-        website_id: website_id, 
-        key: 'sorteo_modo', 
-        value: sorteo_modo 
-      },
-      { 
-        website_id: website_id, 
-        key: 'sorteo_fecha_especifica', 
-        value: sorteo_modo === 'especifico' ? sorteo_fecha_especifica : null 
-      }
+      { website_id: website_id, key: 'sorteo_modo', value: sorteo_modo },
+      { website_id: website_id, key: 'sorteo_fecha_especifica', value: sorteo_modo === 'especifico' ? sorteo_fecha_especifica : null }
     ], {
-      // Le decimos a Supabase que identifique las filas por la combinación de website_id y key
       onConflict: 'website_id, key' 
     });
-  // --- FIN DE LA LÓGICA CORREGIDA ---
-
   if (error) {
     console.error("Error al hacer upsert en la configuración del sorteo:", error);
     return { error: "Hubo un error al guardar la configuración." };
   }
-  
   revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
   return { success: true };
 }
 
-// ... (resto de las actions de clientes) ...
-
-// --- ACCIONES PARA CLIENTES DEL SORTEO DE HERBOLARIA ---
-
 const clienteSorteoSchema = z.object({
-  nombre_cliente: z.string().min(3, "El nombre es requerido."),
+  nombre: z.string().min(3, "El nombre es requerido."),
+  telefono: z.string().optional(),
   numero_factura: z.string().min(1, "El número de factura es requerido."),
-  fecha_compra: z.string().min(1, "La fecha de compra es requerida."), // <-- CAMPO AÑADIDO
+  fecha_compra: z.string().min(1, "La fecha de compra es requerida."),
 });
 
-// CREATE
-export async function addHerbolariaClient(website_id, sorteo_id, formData) {
+export async function addHerbolariaClient(website_id, formData) {
   const rawData = Object.fromEntries(formData);
   const validatedFields = clienteSorteoSchema.safeParse(rawData);
 
@@ -333,10 +300,10 @@ export async function addHerbolariaClient(website_id, sorteo_id, formData) {
   }
 
   const supabase = createClient();
+  
   const { error } = await supabase.from("sorteo_clientes").insert([
     { 
       website_id, 
-      sorteo_id, // Vinculamos al sorteo actual
       ...validatedFields.data 
     },
   ]);
@@ -350,31 +317,29 @@ export async function addHerbolariaClient(website_id, sorteo_id, formData) {
   return { success: true };
 }
 
-// UPDATE
 export async function updateHerbolariaClient(clientId, formData) {
-  const rawData = Object.fromEntries(formData);
-  const validatedFields = clienteSorteoSchema.safeParse(rawData);
+    const rawData = Object.fromEntries(formData);
+    const validatedFields = clienteSorteoSchema.safeParse(rawData);
 
-  if (!validatedFields.success) {
-    return { errors: validatedFields.error.flatten().fieldErrors };
-  }
+    if (!validatedFields.success) {
+        return { errors: validatedFields.error.flatten().fieldErrors };
+    }
     
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("sorteo_clientes")
-    .update(validatedFields.data)
-    .eq("id", clientId);
+    const supabase = createClient();
+    const { error } = await supabase
+        .from("sorteo_clientes")
+        .update(validatedFields.data)
+        .eq("id", clientId);
 
-  if (error) {
-    console.error("Error al actualizar cliente:", error);
-    return { error: "Hubo un error al actualizar el cliente." };
-  }
+    if (error) {
+        console.error("Error al actualizar cliente:", error);
+        return { error: "Hubo un error al actualizar el cliente." };
+    }
 
-  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-  return { success: true };
+    revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+    return { success: true };
 }
 
-// DELETE
 export async function deleteHerbolariaClient(clientId) {
     const supabase = createClient();
     const { error } = await supabase.from("sorteo_clientes").delete().eq("id", clientId);
@@ -388,25 +353,54 @@ export async function deleteHerbolariaClient(clientId) {
     return { success: true };
 }
 
-// ... (código existente de actions.js) ...
+// --- ACCIONES PARA GESTIONAR EL GANADOR (FINAL Y ROBUSTA) ---
 
-// --- ACCIONES PARA GESTIONAR EL GANADOR DEL SORTEO DE HERBOLARIA ---
+async function findOrCreateActiveSorteo(website_id, fecha_sorteo) {
+  const supabaseAdmin = createAdminClient();
+  
+  let { data: sorteo } = await supabaseAdmin
+    .from('sorteo_resultados')
+    .select('id')
+    .eq('website_id', website_id)
+    .eq('fecha_sorteo', fecha_sorteo)
+    .single();
 
-// Acción para designar un ganador manualmente
+  if (!sorteo) {
+    const { data: newSorteo, error: insertError } = await supabaseAdmin
+      .from('sorteo_resultados')
+      .insert({
+        website_id: website_id,
+        fecha_sorteo: fecha_sorteo,
+        estado: 'programado',
+        titulo_sorteo: `Sorteo del ${new Date(fecha_sorteo).toLocaleDateString('es-CO')}`
+      })
+      .select('id')
+      .single();
+    
+    if (insertError) {
+      throw new Error("No se pudo crear el evento del sorteo.");
+    }
+    sorteo = newSorteo;
+  }
+  return sorteo;
+}
+
 export async function setHerbolariaManualWinner(sorteo_id, cliente_id) {
+  // --- LÍNEA DE DEPURACIÓN QUE SOLICITASTE ---
+  console.log("Valores recibidos en setHerbolariaManualWinner:", { sorteo_id, cliente_id });
+  
   if (!sorteo_id || !cliente_id) {
     return { error: "Faltan datos para asignar el ganador." };
   }
-  
-  const supabase = createClient();
-  // Actualizamos la fila del sorteo para establecer el ID del ganador
-  const { error } = await supabase
+
+  const supabaseAdmin = createAdminClient();
+  const { error } = await supabaseAdmin
     .from('sorteo_resultados')
     .update({ cliente_ganador_id: cliente_id })
     .eq('id', sorteo_id);
 
   if (error) {
-    console.error("Error al asignar ganador manual:", error);
+    console.error("Error de Supabase al asignar ganador manual:", error);
     return { error: "No se pudo asignar el ganador." };
   }
 
@@ -414,23 +408,26 @@ export async function setHerbolariaManualWinner(sorteo_id, cliente_id) {
   return { success: true };
 }
 
-// Acción para ejecutar el sorteo automático
-export async function runHerbolariaAutomaticSorteo(sorteo_id) {
-  if (!sorteo_id) {
+export async function runHerbolariaAutomaticSorteo(website_id, fecha_sorteo) {
+  if (!website_id || !fecha_sorteo) {
     return { error: "No se encontró un sorteo programado para ejecutar." };
   }
+  
+  try {
+    const sorteo = await findOrCreateActiveSorteo(website_id, fecha_sorteo);
+    const supabaseAdmin = createAdminClient();
 
-  const supabase = createClient();
-  // Llamamos a la función de PostgreSQL 'realizar_sorteo_automatico'
-  const { error } = await supabase.rpc('realizar_sorteo_automatico', {
-    sorteo_id_param: sorteo_id
-  });
+    const { error } = await supabaseAdmin.rpc('realizar_sorteo_automatico', {
+      sorteo_id_param: sorteo.id
+    });
 
-  if (error) {
+    if (error) throw error;
+
+    revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
+    return { success: true, message: "¡Sorteo realizado con éxito!" };
+
+  } catch (error) {
     console.error("Error al ejecutar el sorteo automático:", error);
     return { error: "La función del sorteo automático falló." };
   }
-
-  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-  return { success: true, message: "¡Sorteo realizado con éxito!" };
 }

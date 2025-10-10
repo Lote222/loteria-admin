@@ -2,14 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 import { addHerbolariaClient } from "@/lib/actions";
 import { toast } from "sonner";
 
-export function AddClientDialog({ website_id, sorteo_id }) {
+export function AddClientDialog({ website_id }) {
   const [open, setOpen] = useState(false);
   const [errors, setErrors] = useState({});
   const [isPending, startTransition] = useTransition();
@@ -17,7 +25,8 @@ export function AddClientDialog({ website_id, sorteo_id }) {
   const handleSubmit = async (formData) => {
     setErrors({});
     startTransition(async () => {
-      const result = await addHerbolariaClient(website_id, sorteo_id, formData);
+      const result = await addHerbolariaClient(website_id, formData);
+      
       if (result?.errors) {
         setErrors(result.errors);
         toast.error("Error de validación", { description: "Por favor, corrige los campos marcados." });
@@ -46,9 +55,14 @@ export function AddClientDialog({ website_id, sorteo_id }) {
         <form action={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div>
-              <Label htmlFor="nombre_cliente">Nombre del Cliente</Label>
-              <Input id="nombre_cliente" name="nombre_cliente" className="mt-1" />
-              {errors.nombre_cliente && <p className="text-red-500 text-sm mt-1">{errors.nombre_cliente[0]}</p>}
+              <Label htmlFor="nombre">Nombre del Cliente</Label>
+              <Input id="nombre" name="nombre" className="mt-1" />
+              {errors.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre[0]}</p>}
+            </div>
+            <div>
+              <Label htmlFor="telefono">Teléfono (Opcional)</Label>
+              <Input id="telefono" name="telefono" className="mt-1" />
+              {errors.telefono && <p className="text-red-500 text-sm mt-1">{errors.telefono[0]}</p>}
             </div>
             <div>
               <Label htmlFor="numero_factura">Número de Factura</Label>
