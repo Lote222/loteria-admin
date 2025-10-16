@@ -2,7 +2,8 @@
 "use client";
 
 import Link from 'next/link';
-import { ExternalLink, Pencil, Ticket, Trophy, Star } from 'lucide-react'; // 1. Importar icono 'Star'
+// FIX: Se elimina el ícono 'Star' que ya no se usa.
+import { ExternalLink, Pencil, Ticket, Trophy, Heart, Award } from 'lucide-react'; 
 import { usePathname } from 'next/navigation';
 
 export default function SiteLink({ site }) {
@@ -13,17 +14,20 @@ export default function SiteLink({ site }) {
   const pathname = usePathname();
   const isEditingInfo = pathname === `/dashboard/edit/${site.slug}`;
   
-  // Lógica para enlaces de "La Balota"
   const isEditingSorteosBalota = pathname === `/dashboard/sorteos/${site.slug}`;
   const isEditingPremiosBalota = pathname === `/dashboard/premios/${site.slug}`;
 
-  // 2. Lógica para el nuevo enlace de "Herbolaria"
-  const isEditingSorteoHerbolaria = pathname === `/dashboard/sorteo-herbolaria/${site.slug}`;
+  const isEditingRituales = pathname === `/dashboard/rituales/${site.slug}`;
+  const isEditingGanadores = pathname === `/dashboard/ganadores/${site.slug}`;
 
   // Reglas de negocio para mostrar los botones
   const hasSorteosBalotaFeature = site.slug === 'la-balota';
   const hasPremiosBalotaFeature = site.slug === 'la-balota';
- const hasHerbolariaSorteoFeature = site.slug === 'herbolaria';
+  
+  // FIX: Se elimina la variable 'hasHerbolariaSorteoFeature'
+  
+  const hasRitualesFeature = site.slug === 'herbolaria' || site.slug === 'aromaluz';
+  const hasGanadoresFeature = site.slug === 'herbolaria' || site.slug === 'aromaluz';
 
   return (
     <li className="mb-3 p-2 rounded-md group bg-gray-50 border">
@@ -45,7 +49,6 @@ export default function SiteLink({ site }) {
                 Editar Información
             </Link>
             
-            {/* Funcionalidades existentes de La Balota */}
             {hasSorteosBalotaFeature && (
               <Link 
                 href={`/dashboard/sorteos/${site.slug}`} 
@@ -67,15 +70,27 @@ export default function SiteLink({ site }) {
               </Link>
             )}
 
-            {/* 4. Botón condicional para el Sorteo de Herbolaria */}
-            {hasHerbolariaSorteoFeature && (
+            {/* FIX: Se ha eliminado el bloque de código que renderizaba el enlace "Gestionar Sorteo" */}
+
+            {hasRitualesFeature && (
               <Link 
-                href={`/dashboard/sorteo-herbolaria/${site.slug}`} 
+                href={`/dashboard/rituales/${site.slug}`} 
                 className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingSorteoHerbolaria ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
+                  isEditingRituales ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
                 }`}>
-                  <Star className="mr-2 h-4 w-4" />
-                  Gestionar Sorteo
+                  <Heart className="mr-2 h-4 w-4" />
+                  Gestionar Rituales
+              </Link>
+            )}
+
+            {hasGanadoresFeature && (
+              <Link 
+                href={`/dashboard/ganadores/${site.slug}`} 
+                className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
+                  isEditingGanadores ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
+                }`}>
+                  <Award className="mr-2 h-4 w-4" />
+                  Gestionar Ganadores
               </Link>
             )}
         </div>

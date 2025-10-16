@@ -268,7 +268,15 @@ export async function getRituales(website_id) {
 
 export async function createRitual(formData) {
   const supabase = createClient();
-  const websiteId = formData.get('website_id');
+  // FIX: Leemos el slug del formulario
+  const slug = formData.get('website_slug');
+  const { data: website } = await supabase.from('websites').select('id').eq('slug', slug).single();
+  
+  if (!website) {
+    throw new Error('Sitio web no encontrado.');
+  }
+  const websiteId = website.id;
+
   const rawFormData = {
     name: formData.get('name'),
     description: formData.get('description'),
@@ -283,14 +291,13 @@ export async function createRitual(formData) {
     throw new Error('No se pudo crear el ritual.');
   }
 
-  revalidatePath(`/dashboard/rituales/${websiteId}`);
-  redirect(`/dashboard/rituales/${websiteId}`);
+  revalidatePath(`/dashboard/rituales/${slug}`);
 }
 
 export async function updateRitual(formData) {
   const supabase = createClient();
   const id = formData.get('id');
-  const websiteId = formData.get('website_id');
+  const slug = formData.get('website_slug');
   const rawFormData = {
     name: formData.get('name'),
     description: formData.get('description'),
@@ -304,14 +311,13 @@ export async function updateRitual(formData) {
     throw new Error('No se pudo actualizar el ritual.');
   }
 
-  revalidatePath(`/dashboard/rituales/${websiteId}`);
-  redirect(`/dashboard/rituales/${websiteId}`);
+  revalidatePath(`/dashboard/rituales/${slug}`);
 }
 
 export async function deleteRitual(formData) {
   const supabase = createClient();
   const id = formData.get('id');
-  const websiteId = formData.get('website_id');
+  const slug = formData.get('website_slug');
 
   const { error } = await supabase.from('rituales').delete().eq('id', id);
 
@@ -320,7 +326,7 @@ export async function deleteRitual(formData) {
     throw new Error('No se pudo eliminar el ritual.');
   }
 
-  revalidatePath(`/dashboard/rituales/${websiteId}`);
+  revalidatePath(`/dashboard/rituales/${slug}`);
 }
 
 // ===============================================
@@ -344,7 +350,15 @@ export async function getGanadores(website_id) {
 
 export async function createGanador(formData) {
   const supabase = createClient();
-  const websiteId = formData.get('website_id');
+  // FIX: Leemos el slug del formulario
+  const slug = formData.get('website_slug');
+  const { data: website } = await supabase.from('websites').select('id').eq('slug', slug).single();
+
+  if (!website) {
+    throw new Error('Sitio web no encontrado.');
+  }
+  const websiteId = website.id;
+
   const rawFormData = {
     nombre_ganador: formData.get('nombre_ganador'),
     nombre_premio: formData.get('nombre_premio'),
@@ -359,14 +373,13 @@ export async function createGanador(formData) {
     throw new Error('No se pudo crear el ganador.');
   }
 
-  revalidatePath(`/dashboard/ganadores/${websiteId}`);
-  redirect(`/dashboard/ganadores/${websiteId}`);
+  revalidatePath(`/dashboard/ganadores/${slug}`);
 }
 
 export async function updateGanador(formData) {
   const supabase = createClient();
   const id = formData.get('id');
-  const websiteId = formData.get('website_id');
+  const slug = formData.get('website_slug');
   const rawFormData = {
     nombre_ganador: formData.get('nombre_ganador'),
     nombre_premio: formData.get('nombre_premio'),
@@ -380,14 +393,13 @@ export async function updateGanador(formData) {
     throw new Error('No se pudo actualizar el ganador.');
   }
   
-  revalidatePath(`/dashboard/ganadores/${websiteId}`);
-  redirect(`/dashboard/ganadores/${websiteId}`);
+  revalidatePath(`/dashboard/ganadores/${slug}`);
 }
 
 export async function deleteGanador(formData) {
     const supabase = createClient();
     const id = formData.get('id');
-    const websiteId = formData.get('website_id');
+    const slug = formData.get('website_slug');
 
     const { error } = await supabase.from('ganadores').delete().eq('id', id);
 
@@ -396,5 +408,5 @@ export async function deleteGanador(formData) {
       throw new Error('No se pudo eliminar el ganador.');
     }
 
-    revalidatePath(`/dashboard/ganadores/${websiteId}`);
+    revalidatePath(`/dashboard/ganadores/${slug}`);
 }

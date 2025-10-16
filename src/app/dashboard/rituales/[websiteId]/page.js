@@ -1,23 +1,40 @@
 // src/app/dashboard/rituales/[websiteId]/page.js
+import { createClient } from "@/lib/supabase/server";
 import { getRituales } from '@/lib/actions';
-// ... (Necesitarás crear componentes para la tabla y los diálogos, similar a los de sorteos)
+import RitualesTable from "@/components/dashboard/RitualesTable";
+import { redirect } from "next/navigation";
 
 export default async function RitualesPage({ params }) {
-  const { websiteId } = params;
-  const rituales = await getRituales(websiteId);
+  // FIX: Renombramos 'websiteId' a 'slug' para mayor claridad.
+  const { websiteId: slug } = params;
+  
+  const supabase = createClient();
+  const { data: website } = await supabase
+    .from('websites')
+    .select('id, label')
+    .eq('slug', slug)
+    .single();
 
-  const siteName = websiteId === process.env.WEBSITE_ID_HERBOLARIA ? 'Herbolaria Sagrada' : 'Aromaluz';
+  if (!website) {
+    redirect('/dashboard');
+  }
+  
+  const rituales = await getRituales(website.id);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Gestionar Rituales para {siteName}</h1>
-      {/* Aquí irían los componentes de la interfaz de usuario (tabla, botones, diálogos)
-        para listar, crear, editar y eliminar rituales.
-        
-        Ejemplo:
-        <RitualesTable rituales={rituales} websiteId={websiteId} />
-      */}
-      <p className="text-gray-500">Próximamente: Tabla de Rituales aquí.</p>
+    <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg w-full mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Gestionar Rituales para <span className="text-indigo-600">{website.label}</span>
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Crea, edita y elimina los rituales o paquetes de premios.
+          </p>
+        </div>
+      </div>
+      {/* FIX: Pasamos el 'slug' a la tabla como 'websiteSlug' */}
+      <RitualesTable rituales={rituales} websiteSlug={slug} />
     </div>
   );
 }
