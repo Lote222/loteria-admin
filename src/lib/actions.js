@@ -19,7 +19,6 @@ const createAdminClient = () => {
   );
 };
 
-
 // --- ESQUEMAS DE VALIDACIÓN ---
 
 const sorteoSchema = z.object({
@@ -105,8 +104,9 @@ export async function deleteSorteo(sorteo_id) {
   return { success: true };
 }
 
-
+// ===============================================
 // --- ACCIONES PARA PREMIOS (LA BALOTA) ---
+// ===============================================
 
 export async function addPremio(website_id, formData) {
   const rawData = Object.fromEntries(formData);
@@ -163,7 +163,9 @@ export async function deletePremio(premio_id) {
     return { success: true };
 }
 
+// ===============================================
 // --- ACCIONES PARA GESTIÓN DE USUARIOS ---
+// ===============================================
 
 export async function inviteUserByEmail(formData) {
   const email = formData.get("email");
@@ -245,189 +247,154 @@ export async function sendPasswordResetEmail(formData) {
   return { success: true };
 }
 
-// --- ACCIONES PARA SORTEO HERBOLARIA ---
+// ===============================================
+// ACCIONES PARA RITUALES
+// ===============================================
 
-const sorteoConfigSchema = z.object({
-  website_id: z.string().uuid(),
-  sorteo_modo: z.enum(['semanal', 'mensual', 'especifico']),
-  sorteo_fecha_especifica: z.string().nullable().optional(),
-});
-
-export async function updateHerbolariaSorteoConfig(formData) {
-  const rawData = {
-    website_id: formData.get('website_id'),
-    sorteo_modo: formData.get('sorteo_modo'),
-    sorteo_fecha_especifica: formData.get('sorteo_fecha_especifica'),
-  };
-  const validatedFields = sorteoConfigSchema.safeParse(rawData);
-  if (!validatedFields.success) {
-    return { error: "Datos inválidos." };
-  }
-  const { website_id, sorteo_modo, sorteo_fecha_especifica } = validatedFields.data;
-  if (sorteo_modo === 'especifico' && !sorteo_fecha_especifica) {
-    return { error: "Debe seleccionar una fecha para el modo específico." };
-  }
+export async function getRituales(website_id) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from('site_configurations')
-    .upsert([
-      { website_id: website_id, key: 'sorteo_modo', value: sorteo_modo },
-      { website_id: website_id, key: 'sorteo_fecha_especifica', value: sorteo_modo === 'especifico' ? sorteo_fecha_especifica : null }
-    ], {
-      onConflict: 'website_id, key' 
-    });
-  if (error) {
-    console.error("Error al hacer upsert en la configuración del sorteo:", error);
-    return { error: "Hubo un error al guardar la configuración." };
-  }
-  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-  return { success: true };
-}
-
-const clienteSorteoSchema = z.object({
-  nombre: z.string().min(3, "El nombre es requerido."),
-  telefono: z.string().optional(),
-  numero_factura: z.string().min(1, "El número de factura es requerido."),
-  fecha_compra: z.string().min(1, "La fecha de compra es requerida."),
-});
-
-export async function addHerbolariaClient(website_id, formData) {
-  const rawData = Object.fromEntries(formData);
-  const validatedFields = clienteSorteoSchema.safeParse(rawData);
-
-  if (!validatedFields.success) {
-    return { errors: validatedFields.error.flatten().fieldErrors };
-  }
-
-  const supabase = createClient();
-  
-  const { error } = await supabase.from("sorteo_clientes").insert([
-    { 
-      website_id, 
-      ...validatedFields.data 
-    },
-  ]);
-
-  if (error) {
-    console.error("Error al añadir cliente:", error);
-    return { error: "Hubo un error al guardar el cliente." };
-  }
-
-  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-  return { success: true };
-}
-
-export async function updateHerbolariaClient(clientId, formData) {
-    const rawData = Object.fromEntries(formData);
-    const validatedFields = clienteSorteoSchema.safeParse(rawData);
-
-    if (!validatedFields.success) {
-        return { errors: validatedFields.error.flatten().fieldErrors };
-    }
-    
-    const supabase = createClient();
-    const { error } = await supabase
-        .from("sorteo_clientes")
-        .update(validatedFields.data)
-        .eq("id", clientId);
-
-    if (error) {
-        console.error("Error al actualizar cliente:", error);
-        return { error: "Hubo un error al actualizar el cliente." };
-    }
-
-    revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-    return { success: true };
-}
-
-export async function deleteHerbolariaClient(clientId) {
-    const supabase = createClient();
-    const { error } = await supabase.from("sorteo_clientes").delete().eq("id", clientId);
-
-    if (error) {
-        console.error("Error al eliminar cliente:", error);
-        return { error: "Hubo un error al eliminar el cliente." };
-    }
-
-    revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-    return { success: true };
-}
-
-// --- ACCIONES PARA GESTIONAR EL GANADOR (FINAL Y ROBUSTA) ---
-
-async function findOrCreateActiveSorteo(website_id, fecha_sorteo) {
-  const supabaseAdmin = createAdminClient();
-  
-  let { data: sorteo } = await supabaseAdmin
-    .from('sorteo_resultados')
-    .select('id')
+  const { data, error } = await supabase
+    .from('rituales')
+    .select('*')
     .eq('website_id', website_id)
-    .eq('fecha_sorteo', fecha_sorteo)
-    .single();
-
-  if (!sorteo) {
-    const { data: newSorteo, error: insertError } = await supabaseAdmin
-      .from('sorteo_resultados')
-      .insert({
-        website_id: website_id,
-        fecha_sorteo: fecha_sorteo,
-        estado: 'programado',
-        titulo_sorteo: `Sorteo del ${new Date(fecha_sorteo).toLocaleDateString('es-CO')}`
-      })
-      .select('id')
-      .single();
-    
-    if (insertError) {
-      throw new Error("No se pudo crear el evento del sorteo.");
-    }
-    sorteo = newSorteo;
-  }
-  return sorteo;
-}
-
-export async function setHerbolariaManualWinner(sorteo_id, cliente_id) {
-  // --- LÍNEA DE DEPURACIÓN QUE SOLICITASTE ---
-  console.log("Valores recibidos en setHerbolariaManualWinner:", { sorteo_id, cliente_id });
-  
-  if (!sorteo_id || !cliente_id) {
-    return { error: "Faltan datos para asignar el ganador." };
-  }
-
-  const supabaseAdmin = createAdminClient();
-  const { error } = await supabaseAdmin
-    .from('sorteo_resultados')
-    .update({ cliente_ganador_id: cliente_id })
-    .eq('id', sorteo_id);
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error("Error de Supabase al asignar ganador manual:", error);
-    return { error: "No se pudo asignar el ganador." };
+    console.error('Error fetching rituales:', error.message);
+    return [];
   }
-
-  revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-  return { success: true };
+  return data;
 }
 
-export async function runHerbolariaAutomaticSorteo(website_id, fecha_sorteo) {
-  if (!website_id || !fecha_sorteo) {
-    return { error: "No se encontró un sorteo programado para ejecutar." };
+export async function createRitual(formData) {
+  const supabase = createClient();
+  const websiteId = formData.get('website_id');
+  const rawFormData = {
+    name: formData.get('name'),
+    description: formData.get('description'),
+    image_url: formData.get('image_url'),
+    website_id: websiteId,
+  };
+
+  const { error } = await supabase.from('rituales').insert([rawFormData]);
+
+  if (error) {
+    console.error('Error creating ritual:', error.message);
+    throw new Error('No se pudo crear el ritual.');
+  }
+
+  revalidatePath(`/dashboard/rituales/${websiteId}`);
+  redirect(`/dashboard/rituales/${websiteId}`);
+}
+
+export async function updateRitual(formData) {
+  const supabase = createClient();
+  const id = formData.get('id');
+  const websiteId = formData.get('website_id');
+  const rawFormData = {
+    name: formData.get('name'),
+    description: formData.get('description'),
+    image_url: formData.get('image_url'),
+  };
+
+  const { error } = await supabase.from('rituales').update(rawFormData).eq('id', id);
+
+  if (error) {
+    console.error('Error updating ritual:', error.message);
+    throw new Error('No se pudo actualizar el ritual.');
+  }
+
+  revalidatePath(`/dashboard/rituales/${websiteId}`);
+  redirect(`/dashboard/rituales/${websiteId}`);
+}
+
+export async function deleteRitual(formData) {
+  const supabase = createClient();
+  const id = formData.get('id');
+  const websiteId = formData.get('website_id');
+
+  const { error } = await supabase.from('rituales').delete().eq('id', id);
+
+  if (error) {
+    console.error('Error deleting ritual:', error.message);
+    throw new Error('No se pudo eliminar el ritual.');
+  }
+
+  revalidatePath(`/dashboard/rituales/${websiteId}`);
+}
+
+// ===============================================
+// ACCIONES PARA GANADORES
+// ===============================================
+
+export async function getGanadores(website_id) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('ganadores')
+    .select('*')
+    .eq('website_id', website_id)
+    .order('fecha_sorteo', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching ganadores:', error.message);
+    return [];
+  }
+  return data;
+}
+
+export async function createGanador(formData) {
+  const supabase = createClient();
+  const websiteId = formData.get('website_id');
+  const rawFormData = {
+    nombre_ganador: formData.get('nombre_ganador'),
+    nombre_premio: formData.get('nombre_premio'),
+    fecha_sorteo: formData.get('fecha_sorteo'),
+    website_id: websiteId,
+  };
+
+  const { error } = await supabase.from('ganadores').insert([rawFormData]);
+
+  if (error) {
+    console.error('Error creating ganador:', error.message);
+    throw new Error('No se pudo crear el ganador.');
+  }
+
+  revalidatePath(`/dashboard/ganadores/${websiteId}`);
+  redirect(`/dashboard/ganadores/${websiteId}`);
+}
+
+export async function updateGanador(formData) {
+  const supabase = createClient();
+  const id = formData.get('id');
+  const websiteId = formData.get('website_id');
+  const rawFormData = {
+    nombre_ganador: formData.get('nombre_ganador'),
+    nombre_premio: formData.get('nombre_premio'),
+    fecha_sorteo: formData.get('fecha_sorteo'),
+  };
+
+  const { error } = await supabase.from('ganadores').update(rawFormData).eq('id', id);
+
+  if (error) {
+    console.error('Error updating ganador:', error.message);
+    throw new Error('No se pudo actualizar el ganador.');
   }
   
-  try {
-    const sorteo = await findOrCreateActiveSorteo(website_id, fecha_sorteo);
-    const supabaseAdmin = createAdminClient();
+  revalidatePath(`/dashboard/ganadores/${websiteId}`);
+  redirect(`/dashboard/ganadores/${websiteId}`);
+}
 
-    const { error } = await supabaseAdmin.rpc('realizar_sorteo_automatico', {
-      sorteo_id_param: sorteo.id
-    });
+export async function deleteGanador(formData) {
+    const supabase = createClient();
+    const id = formData.get('id');
+    const websiteId = formData.get('website_id');
 
-    if (error) throw error;
+    const { error } = await supabase.from('ganadores').delete().eq('id', id);
 
-    revalidatePath(`/dashboard/sorteo-herbolaria/herbolaria`);
-    return { success: true, message: "¡Sorteo realizado con éxito!" };
+    if (error) {
+      console.error('Error deleting ganador:', error.message);
+      throw new Error('No se pudo eliminar el ganador.');
+    }
 
-  } catch (error) {
-    console.error("Error al ejecutar el sorteo automático:", error);
-    return { error: "La función del sorteo automático falló." };
-  }
+    revalidatePath(`/dashboard/ganadores/${websiteId}`);
 }
