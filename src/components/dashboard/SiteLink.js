@@ -1,99 +1,84 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
 import Link from 'next/link';
-// FIX: Se elimina el ícono 'Star' que ya no se usa.
-import { ExternalLink, Pencil, Ticket, Trophy, Heart, Award } from 'lucide-react'; 
-import { usePathname } from 'next/navigation';
+import { ExternalLink, Pencil, Ticket, Trophy, Heart, Award, Star, ChevronDown } from 'lucide-react';
 
-export default function SiteLink({ site }) {
+// FIX: Componente interno para los enlaces de gestión, para mantener el código limpio
+const ManagementLink = ({ href, icon: Icon, label, isActive }) => (
+  <Link
+    href={href}
+    className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
+      isActive ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
+    }`}
+  >
+    <Icon className="mr-2 h-4 w-4" />
+    <span>{label}</span>
+  </Link>
+);
+
+export default function SiteLink({ site, isOpen, onToggle, pathname }) {
   if (!site || !site.slug) {
-    return null; 
+    return null;
   }
 
-  const pathname = usePathname();
-  const isEditingInfo = pathname === `/dashboard/edit/${site.slug}`;
-  
-  const isEditingSorteosBalota = pathname === `/dashboard/sorteos/${site.slug}`;
-  const isEditingPremiosBalota = pathname === `/dashboard/premios/${site.slug}`;
+  // Lógica para saber si alguna de las rutas de este sitio está activa
+  const isSiteActive = pathname.includes(`/${site.slug}`);
 
-  const isEditingRituales = pathname === `/dashboard/rituales/${site.slug}`;
-  const isEditingGanadores = pathname === `/dashboard/ganadores/${site.slug}`;
-
-  // Reglas de negocio para mostrar los botones
-  const hasSorteosBalotaFeature = site.slug === 'la-balota';
-  const hasPremiosBalotaFeature = site.slug === 'la-balota';
-  
-  // FIX: Se elimina la variable 'hasHerbolariaSorteoFeature'
-  
-  const hasRitualesFeature = site.slug === 'herbolaria' || site.slug === 'aromaluz';
-  const hasGanadoresFeature = site.slug === 'herbolaria' || site.slug === 'aromaluz';
+  // Reglas de negocio para mostrar los botones de gestión
+  const features = [
+    { rule: true, href: `/dashboard/edit/${site.slug}`, icon: Pencil, label: "Editar Información" },
+    { rule: site.slug === 'la-balota', href: `/dashboard/sorteos/${site.slug}`, icon: Ticket, label: "Gestionar Sorteos" },
+    { rule: site.slug === 'la-balota', href: `/dashboard/premios/${site.slug}`, icon: Trophy, label: "Gestionar Premios" },
+    { rule: site.slug === 'herbolaria' || site.slug === 'aromaluz', href: `/dashboard/sorteo-fortuna/${site.slug}`, icon: Star, label: "Sorteo Fortuna" },
+    { rule: site.slug === 'herbolaria' || site.slug === 'aromaluz', href: `/dashboard/rituales/${site.slug}`, icon: Heart, label: "Gestionar Rituales" },
+  ].filter(f => f.rule);
 
   return (
-    <li className="mb-3 p-2 rounded-md group bg-gray-50 border">
-        <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-sm text-gray-800">{site.label}</h3>
-            {site.link && (
-                <a href={site.link} target="_blank" rel="noopener noreferrer" className="p-1 rounded-md text-gray-500 hover:text-sky-600">
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-            )}
+    <li className="bg-gray-50 border rounded-lg overflow-hidden">
+      {/* Encabezado del Acordeón */}
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between p-3 text-left transition-colors ${isSiteActive ? "bg-sky-100/50" : "hover:bg-gray-100"}`}
+      >
+        <div className="flex items-center">
+          <span className={`font-semibold text-sm ${isSiteActive ? "text-sky-800" : "text-gray-800"}`}>{site.label}</span>
         </div>
-        <div className="space-y-1">
-            <Link 
-              href={`/dashboard/edit/${site.slug}`} 
-              className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                isEditingInfo ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
-              }`}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar Información
-            </Link>
-            
-            {hasSorteosBalotaFeature && (
-              <Link 
-                href={`/dashboard/sorteos/${site.slug}`} 
-                className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingSorteosBalota ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
-                }`}>
-                  <Ticket className="mr-2 h-4 w-4" />
-                  Gestionar Sorteos
-              </Link>
-            )}
-            {hasPremiosBalotaFeature && (
-              <Link 
-                href={`/dashboard/premios/${site.slug}`} 
-                className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingPremiosBalota ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
-                }`}>
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Gestionar Premios
-              </Link>
-            )}
-
-            {/* FIX: Se ha eliminado el bloque de código que renderizaba el enlace "Gestionar Sorteo" */}
-
-            {hasRitualesFeature && (
-              <Link 
-                href={`/dashboard/rituales/${site.slug}`} 
-                className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingRituales ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
-                }`}>
-                  <Heart className="mr-2 h-4 w-4" />
-                  Gestionar Rituales
-              </Link>
-            )}
-
-            {hasGanadoresFeature && (
-              <Link 
-                href={`/dashboard/ganadores/${site.slug}`} 
-                className={`flex items-center font-medium text-sm p-2 rounded-md transition-colors ${
-                  isEditingGanadores ? "bg-sky-700 text-white" : "text-gray-600 hover:bg-gray-200"
-                }`}>
-                  <Award className="mr-2 h-4 w-4" />
-                  Gestionar Ganadores
-              </Link>
-            )}
+        <div className="flex items-center">
+          {site.link && (
+            <a
+              href={site.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1 rounded-md text-gray-500 hover:text-sky-600 mr-2"
+              onClick={(e) => e.stopPropagation()} // Evita que el acordeón se cierre al hacer clic
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+          <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
         </div>
+      </button>
+
+      {/* Contenido del Acordeón (opciones de gestión) */}
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="p-2 space-y-1">
+            {features.map(feature => (
+              <ManagementLink
+                key={feature.href}
+                href={feature.href}
+                icon={feature.icon}
+                label={feature.label}
+                isActive={pathname === feature.href}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </li>
   );
 }

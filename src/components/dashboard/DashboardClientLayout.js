@@ -1,7 +1,6 @@
-// src/components/dashboard/DashboardClientLayout.js
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SiteLink from "@/components/dashboard/SiteLink";
@@ -13,17 +12,31 @@ export default function DashboardClientLayout({ websites, children, userProfile 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  // Filtra los sitios web a los que el usuario tiene acceso
+  // FIX: Nuevo estado para controlar el acordeón
+  const [openAccordion, setOpenAccordion] = useState(null);
+
+  // FIX: Efecto para abrir el acordeón del sitio activo al cargar la página
+  useEffect(() => {
+    const activeSite = websites.find(site => pathname.includes(`/${site.slug}`));
+    if (activeSite) {
+      setOpenAccordion(activeSite.slug);
+    }
+  }, [pathname, websites]);
+
   const accessibleWebsites = userProfile?.role === 'admin' 
-    ? websites // El admin ve todo
+    ? websites
     : websites.filter(site => userProfile?.permissions?.can_view?.includes(site.slug));
 
   const isAdmin = userProfile?.role === 'admin';
   const isUsersPageActive = pathname === '/dashboard/admin/users';
+  
+  // FIX: Función para manejar el clic en el acordeón
+  const handleAccordionToggle = (slug) => {
+    setOpenAccordion(openAccordion === slug ? null : slug);
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Overlay para cerrar en móvil */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-20 bg-black/50 lg:hidden"
@@ -31,7 +44,6 @@ export default function DashboardClientLayout({ websites, children, userProfile 
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 w-64 h-full bg-white p-6 shadow-md flex flex-col transform transition-transform z-30 lg:relative lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -49,14 +61,22 @@ export default function DashboardClientLayout({ websites, children, userProfile 
             <X className="h-5 w-5" />
           </Button>
         </div>
-        <nav className="flex-grow">
-          <ul>
+        
+        {/* FIX: Contenedor del menú con scroll si es necesario */}
+        <nav className="flex-grow overflow-y-auto">
+          <ul className="space-y-2">
             {accessibleWebsites?.map((site) => (
-              <SiteLink key={site.id} site={site} />
+              <SiteLink 
+                key={site.id} 
+                site={site}
+                // Pasamos las nuevas props para el acordeón
+                isOpen={openAccordion === site.slug}
+                onToggle={() => handleAccordionToggle(site.slug)}
+                pathname={pathname}
+              />
             ))}
           </ul>
           
-          {/* Sección de Administración visible solo para admins */}
           {isAdmin && (
             <div className="mt-6 pt-4 border-t">
               <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -80,12 +100,11 @@ export default function DashboardClientLayout({ websites, children, userProfile 
             </div>
           )}
         </nav>
-        <div className="mt-auto">
+        <div className="mt-auto pt-6 border-t">
           <LogoutButton />
         </div>
       </aside>
 
-      {/* Área de Contenido Principal */}
       <div className="flex-1 flex flex-col">
         <header className="lg:hidden bg-white shadow-sm p-4 flex items-center sticky top-0 z-10">
           <Button

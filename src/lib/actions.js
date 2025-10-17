@@ -410,3 +410,86 @@ export async function deleteGanador(formData) {
 
     revalidatePath(`/dashboard/ganadores/${slug}`);
 }
+// ===============================================
+// ACCIONES PARA SORTEO DE LA FORTUNA
+// ===============================================
+
+// FIX: Función para formatear el monto del premio
+const formatMontoPremio = (monto) => {
+  if (!monto || isNaN(monto)) {
+    return null; // O un valor por defecto como "$0 DÓLARES"
+  }
+  const numero = parseInt(monto, 10);
+  return `$${numero.toLocaleString('es-CO')} DÓLARES`;
+};
+
+export async function addSorteoFortuna(website_id, slug, formData) {
+  const supabase = createClient();
+
+  const numerosArray = formData.get('numeros_ganadores')?.split(/\s+/).filter(Boolean) || [];
+  
+  const rawData = {
+    website_id,
+    fecha_sorteo: formData.get('fecha_sorteo'),
+    titulo_premio: formData.get('titulo_premio') || 'PREMIO MAYOR', // Valor por defecto
+    monto_premio: formatMontoPremio(formData.get('monto_premio')), // FIX: Usar la función de formato
+    // subtitulo_sorteo ya no se guarda, se genera en el frontend
+    numeros_ganadores: numerosArray,
+    numero_suerte: formData.get('numero_suerte'),
+    numero_sorteo: formData.get('numero_sorteo'),
+  };
+  
+  const { error } = await supabase.from("sorteos_fortuna").insert([rawData]);
+
+  if (error) {
+    console.error("Error al añadir sorteo de la fortuna:", error);
+    return { error: "Hubo un error al guardar el sorteo." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-fortuna/${slug}`);
+  return { success: true };
+}
+
+export async function updateSorteoFortuna(sorteo_id, slug, formData) {
+  const supabase = createClient();
+
+  const numerosArray = formData.get('numeros_ganadores')?.split(/\s+/).filter(Boolean) || [];
+  
+  const rawData = {
+    fecha_sorteo: formData.get('fecha_sorteo'),
+    titulo_premio: formData.get('titulo_premio') || 'PREMIO MAYOR',
+    monto_premio: formatMontoPremio(formData.get('monto_premio')), // FIX: Usar la función de formato
+    numeros_ganadores: numerosArray,
+    numero_suerte: formData.get('numero_suerte'),
+    numero_sorteo: formData.get('numero_sorteo'),
+  };
+
+  const { error } = await supabase
+    .from("sorteos_fortuna")
+    .update(rawData)
+    .eq("id", sorteo_id);
+
+  if (error) {
+    console.error("Error al actualizar sorteo de la fortuna:", error);
+    return { error: "Hubo un error al actualizar el sorteo." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-fortuna/${slug}`);
+  return { success: true };
+}
+
+export async function deleteSorteoFortuna(sorteo_id, slug) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("sorteos_fortuna")
+    .delete()
+    .eq("id", sorteo_id);
+
+  if (error) {
+    console.error("Error al eliminar sorteo de la fortuna:", error);
+    return { error: "Hubo un error al eliminar el sorteo." };
+  }
+
+  revalidatePath(`/dashboard/sorteo-fortuna/${slug}`);
+  return { success: true };
+}
