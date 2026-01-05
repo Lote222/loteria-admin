@@ -36,12 +36,29 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      // Aquí forzamos el mensaje personalizado sin importar el error real de Supabase
+      setError('Error de conexión. Consulte su proveedor de servicios.');
     } else {
       router.push('/dashboard');
-      router.refresh(); 
+      router.refresh();
     }
-  };
+};
+
+  // const onSubmit = async (data) => {
+  //   setError(null);
+
+  //   const { error } = await supabase.auth.signInWithPassword({
+  //     email: data.email,
+  //     password: data.password,
+  //   });
+
+  //   if (error) {
+  //     setError(error.message);
+  //   } else {
+  //     router.push('/dashboard');
+  //     router.refresh(); 
+  //   }
+  // };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
