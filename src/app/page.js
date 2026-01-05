@@ -37,7 +37,7 @@ export default function LoginPage() {
 
     if (error) {
       // Aquí forzamos el mensaje personalizado sin importar el error real de Supabase
-      setError('Error de conexión. Consulte su proveedor de servicios.');
+      setError('Error de conexión. Consulte su proveedor de servicios Arknica.');
     } else {
       router.push('/dashboard');
       router.refresh();
