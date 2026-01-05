@@ -28,20 +28,11 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data) => {
-    setError(null);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-
-    if (error) {
+   
       // Aquí forzamos el mensaje personalizado sin importar el error real de Supabase
       setError('Error de conexión. Consulte su proveedor de servicios Arknica.');
-    } else {
-      router.push('/dashboard');
-      router.refresh();
-    }
+   
+    
 };
 
   // const onSubmit = async (data) => {
